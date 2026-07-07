@@ -607,6 +607,8 @@
       this.FC   = '#ffffff';   /* fill color     */
       this.LOOPBACK_RIGHT_OFFSET = 40;
       this.LOOPBACK_DOWN_OFFSET  = 24;
+      this.EDGE_LBL_FS = 11;   /* エッジラベルのフォントサイズ (px) */
+      this.EDGE_LBL_SW = 3;    /* エッジラベルの白抜き枠線幅 (stroke-width) */
     }
 
     _updateBounds(x, y) {
@@ -614,15 +616,6 @@
       if (x > this._maxX) this._maxX = x;
       if (y < this._minY) this._minY = y;
       if (y > this._maxY) this._maxY = y;
-    }
-
-    _getLabelWidth(text) {
-      if (!text) return 0;
-      let w = 0;
-      for (let i = 0; i < text.length; i++) {
-        w += text.charCodeAt(i) > 255 ? 12 : 7;
-      }
-      return w;
     }
 
     render(ast, layoutResult) {
@@ -1093,20 +1086,22 @@
 
       let lbl = '';
       if (edge.label) {
-        const lw = this._getLabelWidth(edge.label);
+        /* 共通のテキスト幅計算関数 textNaturalWidth を利用 */
+        const lw = textNaturalWidth(edge.label, this.EDGE_LBL_FS);
 
-        /* フォントサイズ 11px、白抜き枠線幅 3px (半径 1.5px) を考慮した bounds 追跡 */
-        const padX = 2; // 白抜き枠線 (3 / 2 = 1.5px) より少し余裕を持たせる
-        const padYTop = 13; // フォントサイズ 11px + 白抜き枠線の上部 (1.5px) ＝ 12.5px
-        const padYBot = 2;  // 白抜き枠線の下部 (1.5px)
+        /* 定義された定数から bounds パディングを動的算出 */
+        const strokeHalf = this.EDGE_LBL_SW / 2;
+        const padX = Math.ceil(strokeHalf); // 白抜き枠線幅より少し余裕（切り上げ）
+        const padYTop = Math.ceil(this.EDGE_LBL_FS + strokeHalf); // フォントサイズ + 上枠線幅
+        const padYBot = Math.ceil(strokeHalf); // 下枠線幅
 
         this._updateBounds(labelPos.x - padX, labelPos.y - padYTop);
         this._updateBounds(labelPos.x + lw + padX, labelPos.y + padYBot);
 
         /* paint-order: stroke で白抜き輪郭を付けて可読性を確保 */
         lbl = `<text x="${labelPos.x}" y="${labelPos.y}" ` +
-              `font-family="${this.FONT}" font-size="11" fill="#333" ` +
-              `style="paint-order:stroke" stroke="white" stroke-width="3" stroke-linejoin="round">` +
+              `font-family="${this.FONT}" font-size="${this.EDGE_LBL_FS}" fill="#333" ` +
+              `style="paint-order:stroke" stroke="white" stroke-width="${this.EDGE_LBL_SW}" stroke-linejoin="round">` +
               `${this._inlineText(edge.label)}</text>`;
       }
 
