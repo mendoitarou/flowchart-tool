@@ -1094,8 +1094,14 @@
       let lbl = '';
       if (edge.label) {
         const lw = this._getLabelWidth(edge.label);
-        this._updateBounds(labelPos.x, labelPos.y);
-        this._updateBounds(labelPos.x + lw, labelPos.y);
+
+        /* フォントサイズ 11px、白抜き枠線幅 3px (半径 1.5px) を考慮した bounds 追跡 */
+        const padX = 2; // 白抜き枠線 (3 / 2 = 1.5px) より少し余裕を持たせる
+        const padYTop = 13; // フォントサイズ 11px + 白抜き枠線の上部 (1.5px) ＝ 12.5px
+        const padYBot = 2;  // 白抜き枠線の下部 (1.5px)
+
+        this._updateBounds(labelPos.x - padX, labelPos.y - padYTop);
+        this._updateBounds(labelPos.x + lw + padX, labelPos.y + padYBot);
 
         /* paint-order: stroke で白抜き輪郭を付けて可読性を確保 */
         lbl = `<text x="${labelPos.x}" y="${labelPos.y}" ` +
