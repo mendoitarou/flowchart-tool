@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>日本語フローチャート記述ツール</title>
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="header">
+    <h1 class="header__title">日本語フローチャート記述ツール</h1>
+    <div class="header__actions">
+      <button id="btnGitHub" class="btn btn--secondary">GitHub</button>
+      <button id="btnSample"    class="btn btn--secondary">サンプル</button>
+      <button id="btnRender"    class="btn btn--primary"  >描画</button>
+      <button id="btnExportSvg" class="btn btn--secondary">SVG保存</button>
+      <button id="btnExportPng" class="btn btn--secondary">PNG保存</button>
+      <button id="btnExportPdf" class="btn btn--secondary">PDF保存</button>
+    </div>
+  </header>
+
+  <!-- ===== メイン (エディタ + プレビュー) ===== -->
+  <main class="main">
+
+    <!-- 左ペイン: DSL エディタ -->
+    <div class="pane pane--editor">
+      <div class="pane__header">
+        <span class="pane__title">DSLコード</span>
+        <span class="pane__hint">Ctrl+Enter で即時描画</span>
+      </div>
+      <textarea
+        id="editor"
+        class="editor"
+        spellcheck="false"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        placeholder="ここにフローチャートのコードを入力してください…"
+      ></textarea>
+    </div>
+
+    <!-- 右ペイン: SVG プレビュー -->
+    <div class="pane pane--preview">
+      <div class="pane__header">
+        <span class="pane__title">プレビュー</span>
+      </div>
+      <div id="preview" class="preview">
+        <div class="preview__placeholder">
+          左のエディタにコードを入力して<br>「描画」ボタンを押してください
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===== フッター (エラーバー) ===== -->
+  <footer class="footer">
+    <div id="errors" class="errors"></div>
+    <nav class="footer__links">
+      <a href="docs/syntax.md" target="_blank">記法リファレンス</a>
+    </nav>
+  </footer>
+
+  <!-- ===== スクリプト ===== -->
+  <script src="src/jfcd.js"></script>
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script src="vendor/svg2pdf.umd.min.js"></script>
+  <script src="src/app.js"></script>
+
+</body>
+</html>
