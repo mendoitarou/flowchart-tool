@@ -607,11 +607,26 @@
       this.FC   = '#ffffff';   /* fill color     */
       this.LOOPBACK_RIGHT_OFFSET = 40;
       this.LOOPBACK_DOWN_OFFSET  = 24;
+      this.EDGE_LBL_FS = 11;   /* エッジラベルのフォントサイズ (px) */
+      this.EDGE_LBL_SW = 3;    /* エッジラベルの白抜き枠線幅 (stroke-width) */
+    }
+
+    _updateBounds(x, y) {
+      if (x < this._minX) this._minX = x;
+      if (x > this._maxX) this._maxX = x;
+      if (y < this._minY) this._minY = y;
+      if (y > this._maxY) this._maxY = y;
     }
 
     render(ast, layoutResult) {
       const { nodes, edges } = ast;
       const { positions, width, height } = layoutResult;
+
+      /* 描画領域の追跡用 */
+      this._minX = 0;
+      this._minY = 0;
+      this._maxX = width;
+      this._maxY = height;
 
       /* _edge() で y 座標比較に使用するため positions を保持 */
       this._positions = positions;
@@ -672,16 +687,22 @@
         body += this._node(node, p);
       }
 
-      const W = Math.max(width,  300);
-      const H = Math.max(height, 200);
+      const margin = 15;
+      const x0 = Math.min(0, this._minX - margin);
+      const y0 = Math.min(0, this._minY - margin);
+      const x1 = Math.max(width, this._maxX + margin);
+      const y1 = Math.max(height, this._maxY + margin);
+
+      const W = x1 - x0;
+      const H = y1 - y0;
       return (
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">\n` +
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${x0} ${y0} ${W} ${H}">\n` +
         `  <defs>\n` +
         `    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">\n` +
         `      <path d="M0,0 L0,6 L8,3 z" fill="${this.SC}"/>\n` +
         `    </marker>\n` +
         `  </defs>\n` +
-        `  <rect width="${W}" height="${H}" fill="#f7f8fa"/>\n` +
+        `  <rect x="${x0}" y="${y0}" width="${W}" height="${H}" fill="#f7f8fa"/>\n` +
         `  ${body}\n` +
         `</svg>`
       );
@@ -689,6 +710,8 @@
 
     /* ── ノード種別ごとの描画 ─────────────────────────── */
     _node(n, p) {
+      this._updateBounds(p.x - p.w / 2, p.y - p.h / 2);
+      this._updateBounds(p.x + p.w / 2, p.y + p.h / 2);
       switch (n.shape) {
         case 'terminal':     return this._terminal(n, p);
         case 'decision':     return this._decision(n, p);
@@ -890,6 +913,12 @@
       const ex = isLeft ? tp.x + tp.w / 2 : tp.x - tp.w / 2;
       const sy = fp.y;
       const ey = tp.y;
+
+      this._updateBounds(sx, sy);
+      this._updateBounds(ex, ey);
+      this._updateBounds((sx + ex) / 2, sy);
+      this._updateBounds((sx + ex) / 2, ey);
+
       const d = Math.abs(sy - ey) < 2
         ? `M${sx} ${sy} L${ex} ${ey}`
         : `M${sx} ${sy} L${(sx + ex) / 2} ${sy} L${(sx + ex) / 2} ${ey} L${ex} ${ey}`;
@@ -932,6 +961,12 @@
           const sx = fp.x,   sy = fp.y + fp.h / 2;
           const ex = tp.x,   ey = tp.y - tp.h / 2;
           const mY = mergeApproachY((sy + ey) / 2);
+
+          this._updateBounds(sx, sy);
+          this._updateBounds(sx, mY);
+          this._updateBounds(ex, mY);
+          this._updateBounds(ex, ey);
+
           pathD    = Math.abs(sx - ex) < 2
             ? `M${sx} ${sy} L${ex} ${ey}`
             : `M${sx} ${sy} L${sx} ${mY} L${ex} ${mY} L${ex} ${ey}`;
@@ -956,6 +991,13 @@
           if (wouldFoldBack) {
             const bypassX     = goRight ? sx + 30 : sx - 30;
             const aboveTarget = mergeApproachY(ey - 12);
+
+            this._updateBounds(sx, sy);
+            this._updateBounds(bypassX, sy);
+            this._updateBounds(bypassX, aboveTarget);
+            this._updateBounds(ex, aboveTarget);
+            this._updateBounds(ex, ey);
+
             if (goRight) {
               /*
                * 右方向バイパスはアノテーション破線と同一水平セグメントを共有してしまうため、
@@ -969,6 +1011,8 @@
                 labelPos = { x: sx + 6, y: sy - 8 };
               } else {
                 const bypassStartY = Math.min(sy + fp.h / 2, aboveTarget);
+                this._updateBounds(sx, bypassStartY);
+                this._updateBounds(bypassX, bypassStartY);
                 pathD    = `M${sx} ${sy} L${sx} ${bypassStartY} L${bypassX} ${bypassStartY} L${bypassX} ${aboveTarget} L${ex} ${aboveTarget} L${ex} ${ey}`;
                 mergeArrowSegment = { x1: bypassX, y1: aboveTarget, x2: ex, y2: aboveTarget };
                 labelPos = { x: sx + 6, y: bypassStartY - 6 };
@@ -980,6 +1024,12 @@
             }
           } else {
             const joinY = mergeApproachY(sy);
+
+            this._updateBounds(sx, sy);
+            this._updateBounds(sx, joinY);
+            this._updateBounds(ex, joinY);
+            this._updateBounds(ex, ey);
+
             pathD    = Math.abs(joinY - sy) < 2
               ? `M${sx} ${sy} L${ex} ${sy} L${ex} ${ey}`
               : `M${sx} ${sy} L${sx} ${joinY} L${ex} ${joinY} L${ex} ${ey}`;
@@ -1005,6 +1055,14 @@
         );
         const downY  = sy + this.LOOPBACK_DOWN_OFFSET;
         const aboveY = ey - 10;          /* 目標ノード上端の 10px 手前で左折 */
+
+        this._updateBounds(sx, sy);
+        this._updateBounds(sx, downY);
+        this._updateBounds(bypassX, downY);
+        this._updateBounds(bypassX, aboveY);
+        this._updateBounds(ex, aboveY);
+        this._updateBounds(ex, ey);
+
         pathD    = `M${sx} ${sy} L${sx} ${downY} L${bypassX} ${downY} L${bypassX} ${aboveY} L${ex} ${aboveY} L${ex} ${ey}`;
         labelPos = { x: bypassX + 4, y: (downY + aboveY) / 2 };
 
@@ -1013,6 +1071,12 @@
         const sx = fp.x, sy = fp.y + fp.h / 2;
         const ex = tp.x, ey = tp.y - tp.h / 2;
         const mY = mergeApproachY((sy + ey) / 2);
+
+        this._updateBounds(sx, sy);
+        this._updateBounds(sx, mY);
+        this._updateBounds(ex, mY);
+        this._updateBounds(ex, ey);
+
         pathD    = Math.abs(sx - ex) < 2
           ? `M${sx} ${sy} L${ex} ${ey}`
           : `M${sx} ${sy} L${sx} ${mY} L${ex} ${mY} L${ex} ${ey}`;
@@ -1022,10 +1086,22 @@
 
       let lbl = '';
       if (edge.label) {
+        /* 共通のテキスト幅計算関数 textNaturalWidth を利用 */
+        const lw = textNaturalWidth(edge.label, this.EDGE_LBL_FS);
+
+        /* 定義された定数から bounds パディングを動的算出 */
+        const strokeHalf = this.EDGE_LBL_SW / 2;
+        const padX = Math.ceil(strokeHalf); // 白抜き枠線幅より少し余裕（切り上げ）
+        const padYTop = Math.ceil(this.EDGE_LBL_FS + strokeHalf); // フォントサイズ + 上枠線幅
+        const padYBot = Math.ceil(strokeHalf); // 下枠線幅
+
+        this._updateBounds(labelPos.x - padX, labelPos.y - padYTop);
+        this._updateBounds(labelPos.x + lw + padX, labelPos.y + padYBot);
+
         /* paint-order: stroke で白抜き輪郭を付けて可読性を確保 */
         lbl = `<text x="${labelPos.x}" y="${labelPos.y}" ` +
-              `font-family="${this.FONT}" font-size="11" fill="#333" ` +
-              `style="paint-order:stroke" stroke="white" stroke-width="3" stroke-linejoin="round">` +
+              `font-family="${this.FONT}" font-size="${this.EDGE_LBL_FS}" fill="#333" ` +
+              `style="paint-order:stroke" stroke="white" stroke-width="${this.EDGE_LBL_SW}" stroke-linejoin="round">` +
               `${this._inlineText(edge.label)}</text>`;
       }
 

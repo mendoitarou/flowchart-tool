@@ -145,7 +145,7 @@ async function exportPDF() {
   const width = vb && vb.width ? vb.width : svgEl.getBoundingClientRect().width;
   const height = vb && vb.height ? vb.height : svgEl.getBoundingClientRect().height;
   const orientation = width >= height ? 'landscape' : 'portrait';
-  const pdf = new jsPDFCtor({ orientation, unit: 'pt', format: [width, height] });
+  const pdf = new jsPDFCtor({ orientation, unit: 'pt', format: [width, height], compress: true });
 
   try {
     const scale = PDF_EXPORT_SCALE;
@@ -154,6 +154,11 @@ async function exportPDF() {
       height: Math.max(1, Math.round(height * scale)),
     });
     const ctx = canvas.getContext('2d');
+
+    /* JPEG変換時の背景黒化を防ぐため白で塗りつぶし */
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.scale(scale, scale);
 
     const xml = new XMLSerializer().serializeToString(svgEl);
@@ -179,7 +184,7 @@ async function exportPDF() {
       img.src = url;
     });
 
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, width, height);
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, width, height);
     pdf.save('flowchart.pdf');
   } catch (err) {
     console.error(err);
